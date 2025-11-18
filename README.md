@@ -1,7 +1,7 @@
 # AKS-Cluster
 # AKS-Cluster
 # AKS-Cluster
-```text```
+```text
 
 terraform-aks-platform/
 ├── envs/
