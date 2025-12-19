@@ -2,11 +2,11 @@ name: Terraform AKS Cluster Deploy
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ main, master ]
     paths: [ "terraform-aks-platform/**" ]
 
   push:
-    branches: [ main ]
+    branches: [ main, master ]
     paths: [ "terraform-aks-platform/**" ]
 
   workflow_dispatch:
@@ -28,30 +28,29 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
 
-    # Environment selection logic
-    environment: >
-      ${{
-        github.event_name == 'workflow_dispatch' && inputs.environment ||
-        github.event_name == 'push' && 'prod' ||
-        'dev'
-      }}
-
-    defaults:
-      run:
-        working-directory: terraform/envs/${{ job.environment }}
-
     env:
-      # Azure auth
+      TARGET_ENV: >-
+        ${{
+          github.event_name == 'workflow_dispatch' && inputs.environment ||
+          github.event_name == 'push' && 'prod' ||
+          'dev'
+        }}
+
       ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Terraform variables
       TF_VAR_location:        ${{ secrets.TF_LOCATION }}
       TF_VAR_tenant_id:       ${{ secrets.TF_TENANT_ID }}
       TF_VAR_acr_name:        ${{ secrets.TF_ACR_NAME }}
       TF_VAR_key_vault_name: ${{ secrets.TF_KEY_VAULT_NAME }}
       TF_VAR_storage_name:   ${{ secrets.TF_STORAGE_ACCOUNT_NAME }}
+
+    environment: ${{ env.TARGET_ENV }}
+
+    defaults:
+      run:
+        working-directory: terraform/envs/${{ env.TARGET_ENV }}
 
     steps:
       - name: Checkout
@@ -76,23 +75,7 @@ jobs:
             -backend-config="key=${{ secrets.TF_STATE_KEY }}"
 
       - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color
-        continue-on-error: true
-
-      - name: Comment plan on PR
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: terraform-plan
-          message: |
-            ```hcl
-            ${{ steps.plan.outputs.stdout }}
-            ```
-
-      - name: Fail on plan error
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
+        run: terraform plan
 
       - name: Terraform Apply
         if: github.event_name != 'pull_request'
