@@ -1,98 +1,94 @@
-terraform {
-  required_version = ">= 1.5.0"
+locals {
+  env         = "dev"
+  name_prefix = "aksplat-dev"
 
-  backend "azurerm" {
-    resource_group_name  = "rg-tfstate-dev"
-    storage_account_name = "sttfstatedev123"
-    container_name       = "tfstate"
-    key                  = "aks-dev.tfstate"
-  }
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.0"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.0"
-    }
+  tags = {
+    environment = local.env
+    project     = "aks-platform"
   }
 }
 
-provider "azurerm" {
-  features {}
-}
-
-# After AKS is created we use its kube_admin_config to configure
-# Kubernetes and Helm providers.
-provider "kubernetes" {
-  host                   = module.aks.kube_admin_config.host
-  client_certificate     = base64decode(module.aks.kube_admin_config.client_certificate)
-  client_key             = base64decode(module.aks.kube_admin_config.client_key)
-  cluster_ca_certificate = base64decode(module.aks.kube_admin_config.cluster_ca_certificate)
-}
-
-provider "helm" {
-  kubernetes {
-    host                   = module.aks.kube_admin_config.host
-    client_certificate     = base64decode(module.aks.kube_admin_config.client_certificate)
-    client_key             = base64decode(module.aks.kube_admin_config.client_key)
-    cluster_ca_certificate = base64decode(module.aks.kube_admin_config.cluster_ca_certificate)
-  }
-}
-
-module "resource_group" {
+module "rg" {
   source   = "../../modules/resource_group"
-  name     = var.rg_name
+  name     = "${local.name_prefix}-rg"
   location = var.location
-  tags     = var.tags
+  tags     = local.tags
 }
 
-module "network" {
-  source              = "../../modules/network"
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  vnet_name           = var.vnet_name
-  address_space       = var.vnet_address_space
-  subnets             = var.subnets
-  aks_subnet_name     = var.aks_subnet_name
-  tags                = var.tags
+module "networking" {
+  source              = "../../modules/networking"
+  name_prefix         = local.name_prefix
+  location            = var.location
+  resource_group_name = module.rg.name
+
+  address_space                  = ["10.10.0.0/16"]
+  subnet_aks_system_cidr         = "10.10.1.0/24"
+  subnet_aks_nodes_cidr          = "10.10.2.0/24"
+  subnet_private_endpoints_cidr  = "10.10.10.0/24"
+
+  tags = local.tags
 }
 
 module "acr" {
   source              = "../../modules/acr"
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  acr_name            = var.acr_name
-  sku                 = "Standard"
-  admin_enabled       = false
-  tags                = var.tags
+  name                = var.acr_name
+  location            = var.location
+  resource_group_name = module.rg.name
+  tags                = local.tags
+}
+
+module "key_vault" {
+  source                      = "../../modules/key_vault"
+  name                        = var.key_vault_name
+  location                    = var.location
+  resource_group_name         = module.rg.name
+  tenant_id                   = var.tenant_id
+  private_endpoint_subnet_id  = module.networking.subnet_private_endpoints_id
+  tags                        = local.tags
+}
+
+module "storage" {
+  source                      = "../../modules/storage_account"
+  name                        = var.storage_name
+  location                    = var.location
+  resource_group_name         = module.rg.name
+  private_endpoint_subnet_id  = module.networking.subnet_private_endpoints_id
+  tags                        = local.tags
+}
+
+module "dns" {
+  source              = "../../modules/dns_private_zones"
+  resource_group_name = module.rg.name
+  vnet_id             = module.networking.vnet_id
+  tags                = local.tags
 }
 
 module "aks" {
-  source              = "../../modules/aks"
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  cluster_name        = var.aks_name
-  dns_prefix          = var.aks_dns_prefix
-  kubernetes_version  = var.kubernetes_version
-  node_resource_group = var.aks_node_resource_group
-  system_node_count   = var.system_node_count
-  system_node_vm_size = var.system_node_vm_size
-  vnet_subnet_id      = module.network.aks_subnet_id
-  private_cluster_enabled = true
-  acr_id              = module.acr.id
-  tags                = var.tags
+  source                     = "../../modules/aks"
+  name                       = "${local.name_prefix}-aks"
+  location                   = var.location
+  resource_group_name        = module.rg.name
+  dns_prefix                 = "aksplatdev"
+
+  kubernetes_version         = "1.30.3"
+
+  system_node_subnet_id      = module.networking.subnet_aks_system_id
+  system_node_count          = 1
+  system_node_vm_size        = "Standard_DS2_v2"
+
+  user_node_pool_enabled     = true
+  user_node_subnet_id        = module.networking.subnet_aks_nodes_id
+  user_node_count            = 2
+  user_node_vm_size          = "Standard_DS2_v2"
+
+  tags = local.tags
 }
 
-module "argocd" {
-  source           = "../../modules/argocd_bootstrap"
-  namespace        = "argocd"
-  create_namespace = true
-  # values = [file("${path.module}/argocd-values-dev.yaml")] # optional
+module "acr_pull" {
+  source           = "../../modules/acr"
+  name             = var.acr_name
+  location         = var.location
+  resource_group_name = module.rg.name
+  aks_principal_id = module.aks.kubelet_identity_object_id
+  tags             = local.tags
 }

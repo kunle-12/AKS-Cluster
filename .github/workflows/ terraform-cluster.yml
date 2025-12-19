@@ -1,0 +1,99 @@
+name: Terraform AKS Cluster Deploy
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths: [ "terraform-aks-platform/**" ]
+
+  push:
+    branches: [ main ]
+    paths: [ "terraform-aks-platform/**" ]
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    # Environment selection logic
+    environment: >
+      ${{
+        github.event_name == 'workflow_dispatch' && inputs.environment ||
+        github.event_name == 'push' && 'prod' ||
+        'dev'
+      }}
+
+    defaults:
+      run:
+        working-directory: terraform/envs/${{ job.environment }}
+
+    env:
+      # Azure auth
+      ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Terraform variables
+      TF_VAR_location:        ${{ secrets.TF_LOCATION }}
+      TF_VAR_tenant_id:       ${{ secrets.TF_TENANT_ID }}
+      TF_VAR_acr_name:        ${{ secrets.TF_ACR_NAME }}
+      TF_VAR_key_vault_name: ${{ secrets.TF_KEY_VAULT_NAME }}
+      TF_VAR_storage_name:   ${{ secrets.TF_STORAGE_ACCOUNT_NAME }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER }}" \
+            -backend-config="key=${{ secrets.TF_STATE_KEY }}"
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color
+        continue-on-error: true
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: terraform-plan
+          message: |
+            ```hcl
+            ${{ steps.plan.outputs.stdout }}
+            ```
+
+      - name: Fail on plan error
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform Apply
+        if: github.event_name != 'pull_request'
+        run: terraform apply -auto-approve
