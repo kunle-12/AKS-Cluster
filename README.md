@@ -1,6 +1,5 @@
 # AKS-Cluster
-# AKS-Cluster
-# AKS-Cluster
+
 ```text
 
 terraform-aks-platform/
@@ -21,4 +20,4 @@ terraform-aks-platform/
     │   └── outputs.tf
     ├── acr/
     ├── aks/
-    └── argocd_bootstrap/   # optional module to install ArgoCD via Helm
+    
