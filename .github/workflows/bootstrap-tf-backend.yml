@@ -1,0 +1,64 @@
+name: Bootstrap Terraform Backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create backend resources
+        run: |
+          ENV=${{ inputs.environment }}
+
+          RG="rg-tfstate-${ENV}"
+          SA="sttfstate${ENV}$(date +%s | tail -c 5)"
+          CONTAINER="tfstate"
+
+          echo "Creating resource group: $RG"
+          az group create \
+            --name $RG \
+            --location ${{ secrets.TF_LOCATION }}
+
+          echo "Creating storage account: $SA"
+          az storage account create \
+            --name $SA \
+            --resource-group $RG \
+            --location ${{ secrets.TF_LOCATION }} \
+            --sku Standard_LRS \
+            --encryption-services blob
+
+          echo "Creating blob container"
+          az storage container create \
+            --name $CONTAINER \
+            --account-name $SA \
+            --auth-mode login
+
+          echo ""
+          echo "SAVE THESE AS GITHUB ENVIRONMENT SECRETS:"
+          echo "TF_STATE_RESOURCE_GROUP=$RG"
+          echo "TF_STATE_STORAGE_ACCOUNT=$SA"
+          echo "TF_STATE_CONTAINER=$CONTAINER"
+          echo "TF_STATE_KEY=aks-platform-${ENV}.tfstate"
