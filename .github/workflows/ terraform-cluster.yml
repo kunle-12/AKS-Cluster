@@ -2,12 +2,12 @@ name: Terraform AKS Cluster Deploy
 
 on:
   pull_request:
-    branches: [ main, master ]
+    branches: [ master ]
     paths:
       - "terraform-aks-platform/**"
 
   push:
-    branches: [ main, master ]
+    branches: [ master ]
     paths:
       - "terraform-aks-platform/**"
 
