@@ -3,11 +3,13 @@ name: Terraform AKS Cluster Deploy
 on:
   pull_request:
     branches: [ main, master ]
-    paths: [ "terraform-aks-platform/**" ]
+    paths:
+      - "terraform-aks-platform/**"
 
   push:
     branches: [ main, master ]
-    paths: [ "terraform-aks-platform/**" ]
+    paths:
+      - "terraform-aks-platform/**"
 
   workflow_dispatch:
     inputs:
@@ -28,35 +30,32 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
 
-    env:
-      TARGET_ENV: >-
-        ${{
-          github.event_name == 'workflow_dispatch' && inputs.environment ||
-          github.event_name == 'push' && 'prod' ||
-          'dev'
-        }}
-
-      ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      TF_VAR_location:        ${{ secrets.TF_LOCATION }}
-      TF_VAR_tenant_id:       ${{ secrets.TF_TENANT_ID }}
-      TF_VAR_acr_name:        ${{ secrets.TF_ACR_NAME }}
-      TF_VAR_key_vault_name: ${{ secrets.TF_KEY_VAULT_NAME }}
-      TF_VAR_storage_name:   ${{ secrets.TF_STORAGE_ACCOUNT_NAME }}
-
-    environment: ${{ env.TARGET_ENV }}
+    environment: >-
+      ${{
+        github.event_name == 'workflow_dispatch' && inputs.environment ||
+        github.event_name == 'push' && 'prod' ||
+        'dev'
+      }}
 
     defaults:
       run:
-        working-directory: terraform/envs/${{ env.TARGET_ENV }}
+        working-directory: >-
+          terraform-aks-platform/envs/${{
+            github.event_name == 'workflow_dispatch' && inputs.environment ||
+            github.event_name == 'push' && 'prod' ||
+            'dev'
+          }}
+
+    env:
+      ARM_CLIENT_ID:       ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID:       ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Azure login
+      - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -67,16 +66,31 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
-            -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \
-            -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER }}" \
-            -backend-config="key=${{ secrets.TF_STATE_KEY }}"
+        run: terraform init
 
       - name: Terraform Plan
-        run: terraform plan
+        run: |
+          terraform plan \
+            -var-file=$(
+              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                echo "${{ inputs.environment }}.tfvars"
+              elif [ "${{ github.event_name }}" = "push" ]; then
+                echo "prod.tfvars"
+              else
+                echo "dev.tfvars"
+              fi
+            )
 
       - name: Terraform Apply
         if: github.event_name != 'pull_request'
-        run: terraform apply -auto-approve
+        run: |
+          terraform apply -auto-approve \
+            -var-file=$(
+              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                echo "${{ inputs.environment }}.tfvars"
+              elif [ "${{ github.event_name }}" = "push" ]; then
+                echo "prod.tfvars"
+              else
+                echo "dev.tfvars"
+              fi
+            )
