@@ -2,10 +2,6 @@ variable "location" {
   type        = string
 }
 
-variable "tenant_id" {
-  type        = string
-}
-
 variable "acr_name" {
   type        = string
 }
