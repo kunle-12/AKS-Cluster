@@ -8,10 +8,10 @@ variable "tenant_id" {
   description = "Azure tenant ID"
 }
 
-variable "acr_name" {
-  type        = string
-  description = "ACR name"
-}
+# variable "acr_name" {
+#   type        = string
+#   description = "ACR name"
+# }
 
 variable "key_vault_name" {
   type        = string
