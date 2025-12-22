@@ -7,10 +7,11 @@ resource "azurerm_container_registry" "acr" {
   tags                = var.tags
 }
 
+# Use a data source or a static variable that is known before apply
 resource "azurerm_role_assignment" "aks_pull" {
-  count                = var.aks_principal_id != "" ? 1 : 0
+  # Remove the conditional count if possible, 
+  # or ensure aks_principal_id is not coming directly from a resource output
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
   principal_id         = var.aks_principal_id
 }
-
