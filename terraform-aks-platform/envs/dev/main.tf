@@ -84,11 +84,11 @@ module "aks" {
   tags = local.tags
 }
 
-module "acr_pull" {
-  source           = "../../modules/acr"
-  name             = var.acr_name
-  location         = var.location
-  resource_group_name = module.rg.name
-  aks_principal_id = module.aks.kubelet_identity_object_id
-  tags             = local.tags
-}
+# module "acr_pull" {
+#   source           = "../../modules/acr"
+#   name             = var.acr_name
+#   location         = var.location
+#   resource_group_name = module.rg.name
+#   aks_principal_id = module.aks.kubelet_identity_object_id
+#   tags             = local.tags
+# }
