@@ -42,6 +42,7 @@ module "key_vault" {
   name                        = var.key_vault_name
   location                    = var.location
   resource_group_name         = module.rg.name
+  tenant_id                   = var.tenant_id
   private_endpoint_subnet_id  = module.networking.subnet_private_endpoints_id
   tags                        = local.tags
 }
