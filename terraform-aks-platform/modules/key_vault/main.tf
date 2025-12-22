@@ -22,8 +22,9 @@ resource "azurerm_private_endpoint" "this" {
   subnet_id           = var.private_endpoint_subnet_id
 
   private_service_connection {
-    name                           = "${var.name}-conn"
-    private_connection_resource_id = azurerm_key_vault.this.id
-    subresource_names              = ["vault"]
-  }
+  name                           = "${var.name}-conn"
+  private_connection_resource_id = azurerm_key_vault.this.id
+  subresource_names              = ["vault"]
+  is_manual_connection           = false
 }
+
