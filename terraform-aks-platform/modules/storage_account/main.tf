@@ -4,8 +4,11 @@ resource "azurerm_storage_account" "this" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  allow_blob_public_access = false
-  tags                     = var.tags
+  
+  # FIX: Rename the unsupported argument
+  public_network_access_enabled = false 
+  
+  tags = var.tags
 }
 
 resource "azurerm_private_endpoint" "blob" {
@@ -18,5 +21,7 @@ resource "azurerm_private_endpoint" "blob" {
     name                           = "blob"
     private_connection_resource_id = azurerm_storage_account.this.id
     subresource_names              = ["blob"]
+    # Ensure this is also present if required by your policy
+    is_manual_connection           = false 
   }
 }
