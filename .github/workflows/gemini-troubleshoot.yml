@@ -1,0 +1,35 @@
+name: "🔍 Gemini Error Analyst"
+
+on:
+  # Trigger this workflow when your main terraform workflow finishes
+  workflow_run:
+    workflows: ["Terraform AKS Cluster Deploy"]
+    types: [completed]
+
+jobs:
+  analyze-failure:
+    # Only run if the preceding workflow failed
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: "🤖 Gemini Analyze Failure"
+        uses: google-github-actions/run-gemini-cli@v1
+        with:
+          # Use your stored GEMINI_API_KEY from GitHub Secrets
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          # The prompt tells Gemini exactly what to look for
+          prompt: |
+            The 'Terraform AKS Cluster Deploy' workflow failed. 
+            1. Retrieve the logs from the failed run.
+            2. Identify the root cause (e.g., K8s version, resource conflict, or quota).
+            3. Propose the exact Terraform code fix.
+            4. Post the fix as a comment on the related Issue or Pull Request.
