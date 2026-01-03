@@ -71,15 +71,17 @@ module "aks" {
   dns_prefix                 = "aksplatprod"
 
   kubernetes_version         = "1.31"
+  sku_tier                   = "Premium"
+  support_plan               = "AKSLongTermSupport"
 
   system_node_subnet_id      = module.networking.subnet_aks_system_id
-  system_node_count          = 3
-  system_node_vm_size        = "Standard_DS3_v2"
+  system_node_count          = 1
+  system_node_vm_size        = "Standard_DS2_v2"
 
   user_node_pool_enabled     = true
   user_node_subnet_id        = module.networking.subnet_aks_nodes_id
-  user_node_count            = 5
-  user_node_vm_size          = "Standard_DS3_v2"
+  user_node_count            = 2
+  user_node_vm_size          = "Standard_DS2_v2"
 
   tags = local.tags
 }

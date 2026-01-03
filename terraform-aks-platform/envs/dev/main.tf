@@ -71,6 +71,8 @@ module "aks" {
   dns_prefix                 = "aksplatdev"
 
   kubernetes_version         = "1.31"
+  sku_tier                   = "Premium"
+  support_plan               = "AKSLongTermSupport"
 
   system_node_subnet_id      = module.networking.subnet_aks_system_id
   system_node_count          = 1
