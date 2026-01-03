@@ -1,4 +1,4 @@
-location       = "eastus2"
+location       = "centralus"
 
 # acr_name       = "aksprodacr001"
 key_vault_name = "kv-aks-prod-ham-001"

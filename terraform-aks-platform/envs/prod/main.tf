@@ -70,7 +70,7 @@ module "aks" {
   resource_group_name        = module.rg.name
   dns_prefix                 = "aksplatprod"
 
-  kubernetes_version         = "1.31"
+  kubernetes_version         = "1.32"
   sku_tier                   = "Premium"
   
 
