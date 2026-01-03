@@ -6,13 +6,6 @@ resource "azurerm_kubernetes_cluster" "this" {
   kubernetes_version  = var.kubernetes_version
   sku_tier            = var.sku_tier
 
-  dynamic "support_plan" {
-    for_each = var.support_plan == null ? [] : [1]
-    content {
-      name = var.support_plan
-    }
-  }
-
 
   identity {
     type = "SystemAssigned"

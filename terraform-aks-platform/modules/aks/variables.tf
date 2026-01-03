@@ -20,12 +20,6 @@ variable "sku_tier" {
   default     = "Standard"
 }
 
-variable "support_plan" {
-  description = "AKS support plan"
-  type        = string
-  default     = null
-}
-
 
 variable "tags" {
   type    = map(string)
