@@ -20,6 +20,12 @@ variable "sku_tier" {
   default     = "Standard"
 }
 
+variable "support_plan" {
+  description = "Specifies the support plan for the AKS cluster. Possible values are KubernetesOfficial and AKSLongTermSupport."
+  type        = string
+  default     = "KubernetesOfficial"
+}
+
 
 variable "tags" {
   type    = map(string)

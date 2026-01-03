@@ -5,7 +5,7 @@ resource "azurerm_kubernetes_cluster" "this" {
   dns_prefix          = var.dns_prefix
   kubernetes_version  = var.kubernetes_version
   sku_tier            = var.sku_tier
-
+  support_plan = var.support_plan
 
   identity {
     type = "SystemAssigned"

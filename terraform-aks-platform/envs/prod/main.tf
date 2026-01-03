@@ -70,9 +70,9 @@ module "aks" {
   resource_group_name        = module.rg.name
   dns_prefix                 = "aksplatprod"
 
-  kubernetes_version         = "1.28"
+  kubernetes_version         = "1.32"
   sku_tier                   = "Premium"
-  
+  support_plan               = "KubernetesOfficial"
 
   system_node_subnet_id      = module.networking.subnet_aks_system_id
   system_node_count          = 1
