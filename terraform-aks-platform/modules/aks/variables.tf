@@ -14,6 +14,19 @@ variable "user_node_subnet_id" { type = string }
 variable "user_node_count" { type = number }
 variable "user_node_vm_size" { type = string }
 
+variable "sku_tier" {
+  description = "AKS SKU tier (Standard or Premium)"
+  type        = string
+  default     = "Standard"
+}
+
+variable "support_plan" {
+  description = "AKS support plan"
+  type        = string
+  default     = null
+}
+
+
 variable "tags" {
   type    = map(string)
   default = {}
