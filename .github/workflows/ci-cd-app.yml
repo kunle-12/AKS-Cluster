@@ -57,7 +57,7 @@ jobs:
 
       - name: Deploy application with Helm
         run: |
-          helm upgrade --install $RELEASE_NAME ./helm/hello-app \
+          helm upgrade --install $RELEASE_NAME ./Apps/helm-chart \
             --namespace $NAMESPACE \
             --create-namespace \
             --set image.repository=ghcr.io/${{ env.IMAGE_REPO }} \
