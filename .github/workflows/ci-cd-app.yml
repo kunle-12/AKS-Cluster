@@ -41,10 +41,10 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./apps
+          context: ./sample-app
           push: true
           tags: |
-            ghcr.io/${{ env.IMAGE_REPO }}:sha-${{ github.sha }}
+            ghcr.io/kunle-12/aks-cluster:sha-${{ github.sha }}
 
       - name: Set AKS context
         uses: azure/aks-set-context@v4
