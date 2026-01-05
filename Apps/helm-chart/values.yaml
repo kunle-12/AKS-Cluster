@@ -1,4 +1,6 @@
 namespace: hello-app
+env:
+  appEnv: prod
 
 replicaCount: 2
 
@@ -10,3 +12,7 @@ image:
 service:
   type: ClusterIP
   port: 3000
+
+ingress:
+  enabled: true
+  host: hello-app.local
