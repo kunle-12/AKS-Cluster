@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-app
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/kunle-12/AKS-Cluster.git
+    targetRevision: develop
+    path: Apps/helm-chart
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hello
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
