@@ -1,0 +1,64 @@
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_REPO: kunle-12/aks-cluster
+  NAMESPACE: hello-app
+  RELEASE_NAME: hello-app
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_REPO }}:sha-${{ github.sha }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: aksplat-prod-rg
+          cluster-name: aksplat-prod-aks
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy application with Helm
+        run: |
+          helm upgrade --install $RELEASE_NAME ./helm/hello-app \
+            --namespace $NAMESPACE \
+            --create-namespace \
+            --set image.repository=ghcr.io/${{ env.IMAGE_REPO }} \
+            --set image.tag=sha-${{ github.sha }}

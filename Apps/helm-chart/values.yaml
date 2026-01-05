@@ -1,0 +1,12 @@
+namespace: hello-app
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/kunle-12/aks-cluster
+  tag: "sha-PLACEHOLDER"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3000
